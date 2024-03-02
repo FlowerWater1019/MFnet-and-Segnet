@@ -1,8 +1,9 @@
 # coding:utf-8
 import numpy as np
-import chainer
 from PIL import Image
-from ipdb import set_trace as st
+
+DEVICE = {'cpu':'cuda:0'}
+
 
 def calculate_accuracy(logits, labels):
     # inputs should be torch.tensor

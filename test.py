@@ -1,7 +1,6 @@
 # coding:utf-8
 import os
 import argparse
-import time
 import numpy as np
 
 import torch
@@ -10,20 +9,17 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from util.MF_dataset import MF_dataset
-from util.util import calculate_accuracy, calculate_result
+from util.util import calculate_accuracy, calculate_result, DEVICE
 
 from model import MFNet
 from train import n_class, data_dir, model_dir
 
 
 def main():
-    
-    cf = np.zeros((n_class, n_class))
-
     model = eval(args.model_name)(n_class=n_class)
     if args.gpu >= 0: model.cuda(args.gpu)
     print('| loading model file %s... ' % final_model_file, end='')
-    model.load_state_dict(torch.load(final_model_file, map_location={'cuda:0':'cuda:1'}))
+    model.load_state_dict(torch.load(final_model_file, map_location=DEVICE))
     print('done!')
 
     test_dataset  = MF_dataset(data_dir, 'test', have_label=True)
@@ -39,6 +35,8 @@ def main():
 
     loss_avg = 0.
     acc_avg  = 0.
+    cf = np.zeros((n_class, n_class))
+    
     model.eval()
     with torch.no_grad():
         for it, (images, labels, names) in enumerate(test_loader):
@@ -66,7 +64,6 @@ def main():
                     cf[gtcid, pcid] += int(intersection.sum())
 
     overall_acc, acc, IoU = calculate_result(cf)
-
     print('| overall accuracy:', overall_acc)
     print('| accuracy of each class:', acc)
     print('| class accuracy avg:', acc.mean())
@@ -75,12 +72,11 @@ def main():
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser(description='Test MFNet with pytorch')
     parser.add_argument('--model_name',  '-M',  type=str, default='MFNet')
-    parser.add_argument('--batch_size',  '-B',  type=int, default=16)
+    parser.add_argument('--batch_size',  '-B',  type=int, default=8)
     parser.add_argument('--gpu',         '-G',  type=int, default=0)
-    parser.add_argument('--num_workers', '-j',  type=int, default=8)
+    parser.add_argument('--num_workers', '-j',  type=int, default=0)
     args = parser.parse_args()
 
     model_dir        = os.path.join(model_dir, args.model_name)

@@ -5,8 +5,7 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 import numpy as np
 from PIL import Image
-
-from ipdb import set_trace as st
+from PIL.Image import Resampling
 
 
 class MF_dataset(Dataset):
@@ -31,6 +30,7 @@ class MF_dataset(Dataset):
     def read_image(self, name, folder):
         file_path = os.path.join(self.data_dir, '%s/%s.png' % (folder, name))
         image     = np.asarray(Image.open(file_path)) # (w,h,c)
+        image = image.copy()
         image.flags.writeable = True
         return image
 
@@ -43,7 +43,7 @@ class MF_dataset(Dataset):
             image, label = func(image, label)
 
         image = np.asarray(Image.fromarray(image).resize((self.input_w, self.input_h)), dtype=np.float32).transpose((2,0,1))/255
-        label = np.asarray(Image.fromarray(label).resize((self.input_w, self.input_h)), dtype=np.int64)
+        label = np.asarray(Image.fromarray(label).resize((self.input_w, self.input_h), resample=Resampling.NEAREST), dtype=np.int64)
 
         return torch.tensor(image), torch.tensor(label), name
 
@@ -56,7 +56,6 @@ class MF_dataset(Dataset):
 
 
     def __getitem__(self, index):
-
         if self.is_train is True:
             return self.get_train_item(index)
         else: 
@@ -64,7 +63,8 @@ class MF_dataset(Dataset):
 
     def __len__(self):
         return self.n_data
-
+    
+    
 if __name__ == '__main__':
-    data_dir = '../../data/MF/'
+    data_dir = 'data/MF/'
     MF_dataset()

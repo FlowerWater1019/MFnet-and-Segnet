@@ -6,3 +6,4 @@ weights/*
 !weights/final.pth
 !weights/log.txt
 !weights/tmp.optim
+!weifhts/tmp.pth

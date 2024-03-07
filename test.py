@@ -11,8 +11,9 @@ from torch.utils.data import DataLoader
 from util.MF_dataset import MF_dataset
 from util.util import calculate_accuracy, calculate_result, DEVICE
 
-from model import MFNet
+from model import MFNet, SegNet
 from train import n_class, data_dir, model_dir
+from attack import MyAttack, get_attack
 
 
 def main():
@@ -46,6 +47,10 @@ def main():
                 images = images.cuda(args.gpu)
                 labels = labels.cuda(args.gpu)
 
+            if(args.attack):
+                attack = get_attack(args, model)
+                images = attack(images, labels)
+            
             logits = model(images)
             loss = F.cross_entropy(logits, labels)
             acc = calculate_accuracy(logits, labels)
@@ -77,6 +82,12 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size',  '-B',  type=int, default=8)
     parser.add_argument('--gpu',         '-G',  type=int, default=0)
     parser.add_argument('--num_workers', '-j',  type=int, default=0)
+    
+    parser.add_argument('--attack',      '-atk',action = 'store_true')
+    parser.add_argument('--method',             type=str,   default='PGD')
+    parser.add_argument('--eps',                type=float, default=8/255)
+    parser.add_argument('--alpha',              type=float, default=1/255)
+    parser.add_argument('--steps',              type=int,   default=10)
     args = parser.parse_args()
 
     model_dir        = os.path.join(model_dir, args.model_name)

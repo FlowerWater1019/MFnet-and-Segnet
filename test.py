@@ -9,7 +9,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from util.MF_dataset import MF_dataset
-from util.util import calculate_accuracy, calculate_result, DEVICE
+from util.util import calculate_accuracy, calculate_result, DEVICE, visual_and_plot
 
 from model import MFNet, SegNet
 from train import n_class, data_dir, model_dir
@@ -24,6 +24,27 @@ def main():
     print('done!')
 
     test_dataset  = MF_dataset(data_dir, 'test', have_label=True)
+    
+    if args.single != 0:
+        images, labels, names = test_dataset.get_train_item(args.single)
+        images = Variable(images).unsqueeze(0)
+        labels = Variable(labels).unsqueeze(0)
+        if args.gpu >= 0:
+            images = images.cuda(args.gpu)
+            labels = labels.cuda(args.gpu)
+
+        attack_single = get_attack(args, model)
+        images_atk = attack_single(images, labels)
+        
+        logits = model(images)
+        pred = logits.argmax(1)
+        logits_atk = model(images_atk)
+        pred_atk = logits_atk.argmax(1)
+        
+        visual_and_plot(images, pred, pred_atk)
+        
+        return
+    
     test_loader  = DataLoader(
         dataset     = test_dataset,
         batch_size  = args.batch_size,
@@ -46,7 +67,7 @@ def main():
             if args.gpu >= 0:
                 images = images.cuda(args.gpu)
                 labels = labels.cuda(args.gpu)
-
+            breakpoint()
             if(args.attack):
                 attack = get_attack(args, model)
                 images = attack(images, labels)
@@ -82,6 +103,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size',  '-B',  type=int, default=8)
     parser.add_argument('--gpu',         '-G',  type=int, default=0)
     parser.add_argument('--num_workers', '-j',  type=int, default=0)
+    parser.add_argument('--single',      '-s',  type=int, default=0)
     
     parser.add_argument('--attack',      '-atk',action = 'store_true')
     parser.add_argument('--method',             type=str,   default='PGD')

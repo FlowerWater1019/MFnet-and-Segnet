@@ -1,4 +1,5 @@
 # coding:utf-8
+import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
@@ -55,3 +56,29 @@ def visualize(names, predictions):
 
         img = Image.fromarray(np.uint8(img))
         img.save(names[i].replace('.png', '_pred.png'))
+        
+def get_visual_image(pred):
+    palette = get_palette()
+
+    Pred = pred.to('cpu').squeeze(0).numpy()
+    img = np.zeros((Pred.shape[0], Pred.shape[1], 3), dtype=np.uint8)
+    for cid in range(1, int(pred.max())):
+        img[Pred == cid] = palette[cid]
+    #img = Image.fromarray(np.uint8(img))
+    return img
+
+
+def visual_and_plot(images, pred, pred_atk):
+    images = images[:,:3].to('cpu').squeeze(0).permute(1, 2, 0).numpy()
+    img = get_visual_image(pred)
+    img_atk = get_visual_image(pred_atk)
+
+    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+    ax[0].imshow(images)
+    ax[0].set_title('Original Image')
+    ax[1].imshow(img)
+    ax[1].set_title('Original Prediction')
+    ax[2].imshow(img_atk)
+    ax[2].set_title('Adversarial Prediction')
+    
+    plt.show()

@@ -51,4 +51,6 @@ class MyAttack:
   
   
 def get_attack(args, model):
-    return MyAttack(model, args.method, args.eps, args.alpha, args.steps)
+    eps = float(args.eps)
+    alpha = float(args.alpha)
+    return MyAttack(model, args.method, eps, alpha, args.steps)

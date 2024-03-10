@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from fractions import Fraction
 
 from util.MF_dataset import MF_dataset
 from util.util import calculate_accuracy, calculate_result, DEVICE, visual_and_plot
@@ -67,7 +68,7 @@ def main():
             if args.gpu >= 0:
                 images = images.cuda(args.gpu)
                 labels = labels.cuda(args.gpu)
-            breakpoint()
+
             if(args.attack):
                 attack = get_attack(args, model)
                 images = attack(images, labels)
@@ -90,6 +91,9 @@ def main():
                     cf[gtcid, pcid] += int(intersection.sum())
 
     overall_acc, acc, IoU = calculate_result(cf)
+    if args.attack:
+        print('| eps: %.4f, alpha: %.4f, steps: %d' % (args.eps, args.alpha, args.steps))
+        
     print('| overall accuracy:', overall_acc)
     print('| accuracy of each class:', acc)
     print('| class accuracy avg:', acc.mean())
@@ -107,8 +111,8 @@ if __name__ == '__main__':
     
     parser.add_argument('--attack',      '-atk',action = 'store_true')
     parser.add_argument('--method',             type=str,   default='PGD')
-    parser.add_argument('--eps',                type=float, default=8/255)
-    parser.add_argument('--alpha',              type=float, default=1/255)
+    parser.add_argument('--eps',                type=Fraction, default=Fraction(8, 255))
+    parser.add_argument('--alpha',              type=Fraction, default=Fraction(1, 255))
     parser.add_argument('--steps',              type=int,   default=10)
     args = parser.parse_args()
 

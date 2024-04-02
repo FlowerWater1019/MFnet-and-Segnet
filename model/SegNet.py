@@ -19,6 +19,7 @@ class ConvBnRelu2d(nn.Module):
 class SegNet(nn.Module):
     def __init__(self, n_class, in_channels=4):
         super(SegNet, self).__init__()
+        self.in_channels = in_channels
         
         chs = [32,64,64,128,128]
 
@@ -70,6 +71,11 @@ class SegNet(nn.Module):
         )
 
     def forward(self, x):
+        if self.in_channels == 3:
+            x = x[:, :3]
+        elif self.in_channels == 1:
+            x = x[:,3:]
+        
         x       = self.down1(x)
         x, ind1 = F.max_pool2d(x, 2, 2, return_indices=True)
         x       = self.down2(x)

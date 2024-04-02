@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from fractions import Fraction
 
 from util.MF_dataset import MF_dataset
-from util.util import calculate_accuracy, calculate_result, DEVICE, visual_and_plot
+from util.util import calculate_accuracy, calculate_result, DEVICE, visual_and_plot, channel_filename
 
 from model import MFNet, SegNet
 from train import n_class, data_dir, model_dir
@@ -18,13 +18,18 @@ from attack import MyAttack, get_attack
 
 
 def main():
-    model = eval(args.model_name)(n_class=n_class)
+    if args.model_name == 'SegNet':
+        model = eval(args.model_name)(n_class=n_class, in_channels=args.channels)
+    else:
+        model = eval(args.model_name)(n_class=n_class)
+        
     if args.gpu >= 0: model.cuda(args.gpu)
     print('| loading model file %s... ' % final_model_file, end='')
     model.load_state_dict(torch.load(final_model_file, map_location=DEVICE))
     print('done!')
 
-    test_dataset  = MF_dataset(data_dir, 'test', have_label=True)
+    assert args.split in ['train', 'val', 'test'], 'split must be "train"|"val"|"test"'
+    test_dataset  = MF_dataset(data_dir, args.split, have_label=True)
     
     if args.single != 0:
         images, labels, names = test_dataset.get_train_item(args.single)
@@ -108,16 +113,20 @@ if __name__ == '__main__':
     parser.add_argument('--gpu',         '-G',  type=int, default=0)
     parser.add_argument('--num_workers', '-j',  type=int, default=0)
     parser.add_argument('--single',      '-s',  type=int, default=0)
+    parser.add_argument('--channels',    '-c',  type=int, default=4)
+    parser.add_argument('--split',       '-sp', type=str, default='test')
     
     parser.add_argument('--attack',      '-atk',action = 'store_true')
     parser.add_argument('--method',             type=str,   default='PGD')
     parser.add_argument('--eps',                type=Fraction, default=Fraction(8, 255))
     parser.add_argument('--alpha',              type=Fraction, default=Fraction(1, 255))
     parser.add_argument('--steps',              type=int,   default=10)
+    parser.add_argument('--atk_channel', '-atkc',  type=int, default=4)
     args = parser.parse_args()
 
     model_dir        = os.path.join(model_dir, args.model_name)
-    final_model_file = os.path.join(model_dir, 'final.pth')
+    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels)
+    final_model_file = os.path.join(model_dir, final_model)
     assert os.path.exists(final_model_file), 'model file `%s` do not exist' % (final_model_file)
 
     print('| testing %s on GPU #%d with pytorch' % (args.model_name, args.gpu))

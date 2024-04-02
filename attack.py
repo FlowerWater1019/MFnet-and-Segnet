@@ -7,12 +7,13 @@ from torch import Tensor
 
 class MyAttack:
 
-    def __init__(self, model:nn.Module, method:str, eps:float, alpha:float, steps:int):
+    def __init__(self, model:nn.Module, method:str, eps:float, alpha:float, steps:int, attack_channel:int):
         self.model = model
         self.method = method
         self.eps = eps
         self.alpha = alpha
         self.steps = steps
+        self.attack_channel = attack_channel
     
     def __call__(self, X:Tensor, Y:Tensor):
         ATTACK_FN = {
@@ -20,7 +21,14 @@ class MyAttack:
         'FGSM':   self.FGSM,
         }
         return ATTACK_FN[self.method](X, Y)
-  
+    
+    def grad_channel(self, g:Tensor):
+        if self.attack_channel == 3:
+            g[:, 3, :, :] = 0
+        elif self.attack_channel == 1:
+            g[:, :3, :, :] = 0
+        return g
+    
     def FGSM(self, X:Tensor, Y:Tensor):
         X.requires_grad = True
     
@@ -28,6 +36,7 @@ class MyAttack:
             logits = self.model(X)  
             loss = F.cross_entropy(logits, Y)
             g = grad(loss, X, loss)[0]  
+        g = self.grad_channel(g)
             
         AX = X + g.sign() * self.eps
         AX = torch.clamp(AX, min=0.0, max=1.0).detach()
@@ -43,7 +52,8 @@ class MyAttack:
                 logits = self.model(AX)
                 loss = F.cross_entropy(logits, Y, reduction='none')
                 g = grad(loss, AX, loss)[0]
-        
+            g = self.grad_channel(g)
+            
             AX_new = AX.detach() + g.sign() * self.alpha
             DX = (AX_new - X_orig).clamp(-self.eps, self.eps)
             AX = (X_orig + DX).clamp(0, 1).detach()
@@ -53,4 +63,4 @@ class MyAttack:
 def get_attack(args, model):
     eps = float(args.eps)
     alpha = float(args.alpha)
-    return MyAttack(model, args.method, eps, alpha, args.steps)
+    return MyAttack(model, args.method, eps, alpha, args.steps, args.atk_channel)

@@ -65,7 +65,7 @@ class MFNet(nn.Module):
         # split data into RGB and INF
         x_rgb = x[:,:3]
         x_inf = x[:,3:]
-
+        
         # encode
         x_rgb    = self.conv1_rgb(x_rgb)
         x_rgb    = F.max_pool2d(x_rgb, kernel_size=2, stride=2) # pool1

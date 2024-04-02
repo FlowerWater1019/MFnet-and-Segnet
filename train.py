@@ -9,7 +9,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from util.MF_dataset import MF_dataset
-from util.util import calculate_accuracy, DEVICE
+from util.util import calculate_accuracy, DEVICE, channel_filename
 from util.augmentation import RandomFlip, RandomCrop, RandomCropOut, RandomBrightness, RandomNoise
 from model import MFNet, SegNet
 
@@ -102,7 +102,11 @@ def validation(epo, model, val_loader):
 
 
 def main():
-    model = eval(args.model_name)(n_class=n_class)
+    if args.model_name == 'SegNet':
+        model = eval(args.model_name)(n_class=n_class, in_channels=args.channels)
+    else:
+        model = eval(args.model_name)(n_class=n_class)
+        
     if args.gpu >= 0: model.cuda(args.gpu)
     optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0005) 
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr_start)
@@ -158,14 +162,16 @@ if __name__ == '__main__':
     parser.add_argument('--epoch_from',  '-EF', type=int, default=1)
     parser.add_argument('--gpu',         '-G',  type=int, default=0)
     parser.add_argument('--num_workers', '-j',  type=int, default=0)
+    parser.add_argument('--channels',    '-c',  type=int, default=4)
     args = parser.parse_args()
 
     model_dir = os.path.join(model_dir, args.model_name)
     os.makedirs(model_dir, exist_ok=True)
-    checkpoint_model_file = os.path.join(model_dir, 'tmp.pth')
-    checkpoint_optim_file = os.path.join(model_dir, 'tmp.optim')
-    final_model_file      = os.path.join(model_dir, 'final.pth')
-    log_file              = os.path.join(model_dir, 'log.txt')
+    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels)
+    checkpoint_model_file = os.path.join(model_dir, tmp_model)
+    checkpoint_optim_file = os.path.join(model_dir, tmp_optim)
+    final_model_file      = os.path.join(model_dir, final_model)
+    log_file              = os.path.join(model_dir, log_name)
 
     print('| training %s on GPU #%d with pytorch' % (args.model_name, args.gpu))
     print('| from epoch %d / %s' % (args.epoch_from, args.epoch_max))

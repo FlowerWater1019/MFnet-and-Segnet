@@ -26,8 +26,8 @@ def main():
                 data_acc[col].append(match[i])
                 data_miou[col].append(match[i])
             else:
-                data_acc[col].append(float(match[2*i]))
-                data_miou[col].append(float(match[2*i - 1]))
+                data_acc[col].append(float(match[2*i - 1]))
+                data_miou[col].append(float(match[2*i]))
             
     df_acc = pd.DataFrame(data_acc)
     df_miou = pd.DataFrame(data_miou)

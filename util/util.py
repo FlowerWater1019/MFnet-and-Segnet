@@ -84,11 +84,17 @@ def visual_and_plot(images, pred, pred_atk):
     plt.show()
 
 
-def channel_filename(channel):
-    tmp_model_template = 'tmp_{0}.pth'
-    tmp_optim_template = 'tmp_{0}.optim'
-    final_model_template = 'final_{0}.pth'
-    log_template = 'log_{0}.txt'
+def channel_filename(channel, adv_train=False):
+    if adv_train == False:
+        tmp_model_template = 'tmp_{0}.pth'
+        tmp_optim_template = 'tmp_{0}.optim'
+        final_model_template = 'final_{0}.pth'
+        log_template = 'log_{0}.txt'
+    else:
+        tmp_model_template = 'tmp_{0}_adv.pth'
+        tmp_optim_template = 'tmp_{0}_adv.optim'
+        final_model_template = 'final_{0}_adv.pth'
+        log_template = 'log_{0}_adv.txt'
     
     tmp_model = tmp_model_template.format(channel)
     tmp_optim = tmp_optim_template.format(channel)

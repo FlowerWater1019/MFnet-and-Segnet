@@ -122,10 +122,11 @@ if __name__ == '__main__':
     parser.add_argument('--alpha',              type=Fraction, default=Fraction(1, 255))
     parser.add_argument('--steps',              type=int,   default=10)
     parser.add_argument('--atk_channel', '-atkc',  type=int, default=4)
+    parser.add_argument('--adv_train',              action='store_true')
     args = parser.parse_args()
 
     model_dir        = os.path.join(model_dir, args.model_name)
-    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels)
+    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels, adv_train=args.adv_train)
     final_model_file = os.path.join(model_dir, final_model)
     assert os.path.exists(final_model_file), 'model file `%s` do not exist' % (final_model_file)
 

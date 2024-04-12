@@ -15,7 +15,7 @@ train the following configuration:
 lauch attacks on `test` dataset split, gather metrcis to fill following table:
 
 > Q: Seg-mix/MF 搭配 limit=rgb/inf 是什么意思，如何实现?
-> A: 从数据意义上，这两个模型都需要输入两个成分，通常的PGD攻击会在整个输入(也就是两个成份上)同时添加扰动，而我们想要测试只在一个成分上添加扰动的攻击效果 ;)
+> A: 从数据意义上，这两个模型都需要输入两个成分，通常的PGD攻击会在整个输入(也就是两个成份上)同时添加扰动，而我们想要测试只在一个成分上添加扰动的攻击效果 ;) 
 > 实现方式：魔改 attack.py 在取得 loss 后，给 loss 加一个 mask 以掩蔽另一个暂时不考虑的成分所产生的损失值，给 grad 也加同样的 mask 保证产生新的对抗样本时没有在该成分上引入噪声
 
 参考实现 (你应该写得更灵活，而不是if-else写死各种情况)：

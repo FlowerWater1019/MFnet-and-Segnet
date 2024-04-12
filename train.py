@@ -7,11 +7,13 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from fractions import Fraction
 
 from util.MF_dataset import MF_dataset
 from util.util import calculate_accuracy, DEVICE, channel_filename
 from util.augmentation import RandomFlip, RandomCrop, RandomCropOut, RandomBrightness, RandomNoise
 from model import MFNet, SegNet
+from attack import MyAttack, get_attack
 
 from tqdm import tqdm
 
@@ -30,7 +32,7 @@ lr_start  = 0.01
 lr_decay  = 0.95
 
 
-def train(epo, model, train_loader, optimizer):
+def train(epo, model, train_loader, optimizer, adv_train=False):
     lr_this_epo = lr_start * lr_decay**(epo-1)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr_this_epo
@@ -46,7 +48,13 @@ def train(epo, model, train_loader, optimizer):
         if args.gpu >= 0:
             images = images.cuda(args.gpu)
             labels = labels.cuda(args.gpu)
-
+        
+        if adv_train == True:
+            model.eval()
+            atk_train = get_attack(args, model)
+            images = atk_train(images, labels)
+            model.train()
+            
         optimizer.zero_grad()
         logits = model(images)
         loss = F.cross_entropy(logits, labels)
@@ -109,7 +117,6 @@ def main():
         
     if args.gpu >= 0: model.cuda(args.gpu)
     optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0005) 
-    # optimizer = torch.optim.Adam(model.parameters(), lr=lr_start)
 
     if args.epoch_from > 1:
         print('| loading checkpoint file %s... ' % checkpoint_model_file, end='')
@@ -142,7 +149,7 @@ def main():
     for epo in tqdm(range(args.epoch_from, args.epoch_max+1)):
         print('\n| epo #%s begin...' % epo)
 
-        train(epo, model, train_loader, optimizer)
+        train(epo, model, train_loader, optimizer, adv_train=args.adv_train)
         validation(epo, model, val_loader)
 
         # save check point model
@@ -163,11 +170,18 @@ if __name__ == '__main__':
     parser.add_argument('--gpu',         '-G',  type=int, default=0)
     parser.add_argument('--num_workers', '-j',  type=int, default=0)
     parser.add_argument('--channels',    '-c',  type=int, default=4)
+    
+    parser.add_argument('--adv_train',              action='store_true')
+    parser.add_argument('--method',                 type=str,   default='PGD')
+    parser.add_argument('--eps',                    type=Fraction, default=Fraction(8, 255))
+    parser.add_argument('--alpha',                  type=Fraction, default=Fraction(1, 255))
+    parser.add_argument('--steps',                  type=int,   default=10)
+    parser.add_argument('--atk_channel', '-atkc',   type=int, default=4)
     args = parser.parse_args()
 
     model_dir = os.path.join(model_dir, args.model_name)
     os.makedirs(model_dir, exist_ok=True)
-    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels)
+    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels, adv_train=args.adv_train)
     checkpoint_model_file = os.path.join(model_dir, tmp_model)
     checkpoint_optim_file = os.path.join(model_dir, tmp_optim)
     final_model_file      = os.path.join(model_dir, final_model)

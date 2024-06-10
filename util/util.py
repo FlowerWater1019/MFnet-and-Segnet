@@ -56,7 +56,8 @@ def visualize(names, predictions):
 
         img = Image.fromarray(np.uint8(img))
         img.save(names[i].replace('.png', '_pred.png'))
-        
+
+
 def get_visual_image(pred):
     palette = get_palette()
 
@@ -85,20 +86,12 @@ def visual_and_plot(images, pred, pred_atk):
 
 
 def channel_filename(channel, adv_train=False):
-    if adv_train == False:
-        tmp_model_template = 'tmp_{0}.pth'
-        tmp_optim_template = 'tmp_{0}.optim'
-        final_model_template = 'final_{0}.pth'
-        log_template = 'log_{0}.txt'
-    else:
-        tmp_model_template = 'tmp_{0}_adv.pth'
-        tmp_optim_template = 'tmp_{0}_adv.optim'
-        final_model_template = 'final_{0}_adv.pth'
-        log_template = 'log_{0}_adv.txt'
-    
-    tmp_model = tmp_model_template.format(channel)
-    tmp_optim = tmp_optim_template.format(channel)
-    final_model = final_model_template.format(channel)
-    log_file = log_template.format(channel)
+    suffix = ''
+    suffix += '_adv' if adv_train else ''
+
+    tmp_model = f'tmp_{channel}{suffix}.pth'
+    tmp_optim = f'tmp_{channel}{suffix}.optim'
+    final_model = f'final_{channel}{suffix}.pth'
+    log_file = f'log_{channel}{suffix}.txt'
     
     return tmp_model, tmp_optim, final_model, log_file

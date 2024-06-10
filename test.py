@@ -7,14 +7,13 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from fractions import Fraction
 
 from util.MF_dataset import MF_dataset
 from util.util import calculate_accuracy, calculate_result, DEVICE, visual_and_plot, channel_filename
 
 from model import MFNet, SegNet
 from train import n_class, data_dir, model_dir
-from attack import MyAttack, get_attack
+from attack import get_attack
 
 
 def main():
@@ -64,7 +63,10 @@ def main():
     loss_avg = 0.
     acc_avg  = 0.
     cf = np.zeros((n_class, n_class))
-    
+
+    if args.atk:
+        attack = get_attack(args, model)
+
     model.eval()
     with torch.no_grad():
         for it, (images, labels, names) in enumerate(test_loader):
@@ -74,10 +76,9 @@ def main():
                 images = images.cuda(args.gpu)
                 labels = labels.cuda(args.gpu)
 
-            if(args.attack):
-                attack = get_attack(args, model)
+            if args.atk:
                 images = attack(images, labels)
-            
+
             logits = model(images)
             loss = F.cross_entropy(logits, labels)
             acc = calculate_accuracy(logits, labels)
@@ -96,7 +97,7 @@ def main():
                     cf[gtcid, pcid] += int(intersection.sum())
 
     overall_acc, acc, IoU = calculate_result(cf)
-    if args.attack:
+    if args.atk:
         print('| eps: %.4f, alpha: %.4f, steps: %d' % (args.eps, args.alpha, args.steps))
         
     print('| overall accuracy:', overall_acc)
@@ -115,17 +116,18 @@ if __name__ == '__main__':
     parser.add_argument('--single',      '-s',  type=int, default=0)
     parser.add_argument('--channels',    '-c',  type=int, default=4)
     parser.add_argument('--split',       '-sp', type=str, default='test')
-    
-    parser.add_argument('--attack',      '-atk',action = 'store_true')
-    parser.add_argument('--method',             type=str,   default='PGD')
-    parser.add_argument('--eps',                type=Fraction, default=Fraction(8, 255))
-    parser.add_argument('--alpha',              type=Fraction, default=Fraction(1, 255))
-    parser.add_argument('--steps',              type=int,   default=10)
-    parser.add_argument('--atk_channel', '-atkc',  type=int, default=4)
-    parser.add_argument('--adv_train',              action='store_true')
+    # adv attack
+    parser.add_argument('-atk',           action='store_true')
+    parser.add_argument('--method',       type=str,   default='PGD', choices=['PGD', 'FGSM'])
+    parser.add_argument('--eps',          type=float, default=8/255)
+    parser.add_argument('--alpha',        type=float, default=1/255)
+    parser.add_argument('--steps',        type=int,   default=10)
+    parser.add_argument('--mask_channel', type=int,   default=[], nargs='+', help='channels to mask, list of int')
+    # adv train
+    parser.add_argument('--adv_train',    action='store_true')
     args = parser.parse_args()
 
-    model_dir        = os.path.join(model_dir, args.model_name)
+    model_dir = os.path.join(model_dir, args.model_name)
     tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels, adv_train=args.adv_train)
     final_model_file = os.path.join(model_dir, final_model)
     assert os.path.exists(final_model_file), 'model file `%s` do not exist' % (final_model_file)

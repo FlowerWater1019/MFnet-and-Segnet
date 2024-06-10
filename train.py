@@ -7,13 +7,12 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from fractions import Fraction
 
 from util.MF_dataset import MF_dataset
 from util.util import calculate_accuracy, DEVICE, channel_filename
 from util.augmentation import RandomFlip, RandomCrop, RandomCropOut, RandomBrightness, RandomNoise
 from model import MFNet, SegNet
-from attack import MyAttack, get_attack
+from attack import get_attack
 
 from tqdm import tqdm
 
@@ -32,7 +31,7 @@ lr_start  = 0.01
 lr_decay  = 0.95
 
 
-def train(epo, model, train_loader, optimizer, adv_train=False):
+def train(epo, model, train_loader, optimizer, adv_train:bool=False):
     lr_this_epo = lr_start * lr_decay**(epo-1)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr_this_epo
@@ -41,6 +40,9 @@ def train(epo, model, train_loader, optimizer, adv_train=False):
     acc_avg  = 0.
     start_t = t = time.time()
     
+    if adv_train:
+        atk = get_attack(args, model)
+
     model.train()
     for it, (images, labels, names) in enumerate(train_loader):
         images = Variable(images).cuda(args.gpu) 
@@ -48,13 +50,12 @@ def train(epo, model, train_loader, optimizer, adv_train=False):
         if args.gpu >= 0:
             images = images.cuda(args.gpu)
             labels = labels.cuda(args.gpu)
-        
-        if adv_train == True:
+
+        if adv_train:
             model.eval()
-            atk_train = get_attack(args, model)
-            images = atk_train(images, labels)
+            images = atk(images, labels)
             model.train()
-            
+
         optimizer.zero_grad()
         logits = model(images)
         loss = F.cross_entropy(logits, labels)
@@ -170,13 +171,12 @@ if __name__ == '__main__':
     parser.add_argument('--gpu',         '-G',  type=int, default=0)
     parser.add_argument('--num_workers', '-j',  type=int, default=0)
     parser.add_argument('--channels',    '-c',  type=int, default=4)
-    
-    parser.add_argument('--adv_train',              action='store_true')
-    parser.add_argument('--method',                 type=str,   default='PGD')
-    parser.add_argument('--eps',                    type=Fraction, default=Fraction(8, 255))
-    parser.add_argument('--alpha',                  type=Fraction, default=Fraction(1, 255))
-    parser.add_argument('--steps',                  type=int,   default=10)
-    parser.add_argument('--atk_channel', '-atkc',   type=int, default=4)
+    # adv_train
+    parser.add_argument('--adv_train', action='store_true')
+    parser.add_argument('--method',    type=str,   default='PGD', choices=['PGD'])
+    parser.add_argument('--eps',       type=float, default=8/255)
+    parser.add_argument('--alpha',     type=float, default=1/255)
+    parser.add_argument('--steps',     type=int,   default=10)
     args = parser.parse_args()
 
     model_dir = os.path.join(model_dir, args.model_name)

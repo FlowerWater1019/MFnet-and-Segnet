@@ -1,2 +1,10 @@
+.vscode
 __pycache__
 image/*_pred.png
+
+# repo
+repo/*
+!repo/*.cmd
+
+# generated data
+data/MF_*

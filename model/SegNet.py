@@ -103,11 +103,11 @@ class SegNet(nn.Module):
 
 def unit_test():
     import numpy as np
-    x = torch.tensor(np.random.rand(2,4,480,640).astype(np.float32))
+    x = torch.rand([2, 4, 480, 640])
     model = SegNet(n_class=9)
     y = model(x)
     print('output shape:', y.shape)
-    assert y.shape == (2,9,480,640), 'output shape (2,9,480,640) is expected!'
+    assert y.shape == (2, 9, 480, 640), 'output shape (2,9,480,640) is expected!'
     print('test ok!')
 
 

@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from util.MF_dataset import MF_dataset
+from util.MF_dataset import MF_dataset, MF_dataset_extd
 from util.util import calculate_accuracy, DEVICE, channel_filename
 from util.augmentation import RandomFlip, RandomCrop, RandomCropOut, RandomBrightness, RandomNoise
 from model import MFNet, SegNet
@@ -111,6 +111,7 @@ def validation(epo, model, val_loader):
 
 
 def main():
+    img_dir = os.path.join('data', args.dataset)
     if args.model_name == 'SegNet':
         model = eval(args.model_name)(n_class=n_class, in_channels=args.channels)
     else:
@@ -125,8 +126,8 @@ def main():
         optimizer.load_state_dict(torch.load(checkpoint_optim_file))
         print('done!')
 
-    train_dataset = MF_dataset(data_dir, 'train', have_label=True, transform=augmentation_methods)
-    val_dataset  = MF_dataset(data_dir, 'val', have_label=True)
+    train_dataset = MF_dataset_extd(data_dir, 'train', have_label=True, img_dir=img_dir, transform=augmentation_methods)
+    val_dataset  = MF_dataset_extd(data_dir, 'val', have_label=True, img_dir=img_dir)
 
     train_loader  = DataLoader(
         dataset     = train_dataset,
@@ -171,6 +172,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu',         '-G',  type=int, default=0)
     parser.add_argument('--num_workers', '-j',  type=int, default=0)
     parser.add_argument('--channels',    '-c',  type=int, default=4)
+    parser.add_argument('--dataset',     '-D',  type=str, default='MF', choices=['MF', 'MMIF', 'DIF'])
     # adv_train
     parser.add_argument('--adv_train', action='store_true')
     parser.add_argument('--method',    type=str,   default='PGD', choices=['PGD'])
@@ -181,7 +183,7 @@ if __name__ == '__main__':
 
     model_dir = os.path.join(model_dir, args.model_name)
     os.makedirs(model_dir, exist_ok=True)
-    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels, adv_train=args.adv_train)
+    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels, adv_train=args.adv_train, set_name=args.dataset)
     checkpoint_model_file = os.path.join(model_dir, tmp_model)
     checkpoint_optim_file = os.path.join(model_dir, tmp_optim)
     final_model_file      = os.path.join(model_dir, final_model)

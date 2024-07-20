@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-from util.MF_dataset import MF_dataset
+from util.MF_dataset import MF_dataset, MF_dataset_extd
 from util.util import calculate_accuracy, calculate_result, DEVICE, visual_and_plot, channel_filename
 
 from model import MFNet, SegNet
@@ -17,6 +17,8 @@ from attack import get_attack
 
 
 def main():
+    img_dir = os.path.join('data', args.dataset)
+    
     if args.model_name == 'SegNet':
         model = eval(args.model_name)(n_class=n_class, in_channels=args.channels)
     else:
@@ -28,7 +30,7 @@ def main():
     print('done!')
 
     assert args.split in ['train', 'val', 'test'], 'split must be "train"|"val"|"test"'
-    test_dataset  = MF_dataset(data_dir, args.split, have_label=True)
+    test_dataset  = MF_dataset_extd(data_dir, args.split, have_label=True, img_dir=img_dir)
     
     if args.single != 0:
         images, labels, names = test_dataset.get_train_item(args.single)
@@ -116,6 +118,7 @@ if __name__ == '__main__':
     parser.add_argument('--single',      '-s',  type=int, default=0)
     parser.add_argument('--channels',    '-c',  type=int, default=4)
     parser.add_argument('--split',       '-sp', type=str, default='test')
+    parser.add_argument('--dataset',     '-D',  type=str, default='MF', choices=['MF', 'MMIF', 'DIF'])
     # adv attack
     parser.add_argument('-atk',           action='store_true')
     parser.add_argument('--method',       type=str,   default='PGD', choices=['PGD', 'FGSM'])
@@ -128,7 +131,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     model_dir = os.path.join(model_dir, args.model_name)
-    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels, adv_train=args.adv_train)
+    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels, adv_train=args.adv_train, set_name=args.dataset)
     final_model_file = os.path.join(model_dir, final_model)
     assert os.path.exists(final_model_file), 'model file `%s` do not exist' % (final_model_file)
 

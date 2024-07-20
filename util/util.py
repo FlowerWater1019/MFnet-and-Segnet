@@ -2,8 +2,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from pathlib import Path
 
 DEVICE = {'cpu':'cuda:0'}
+BASE_PATH = Path(__file__).parent.absolute()
 
 
 def calculate_accuracy(logits, labels):
@@ -85,13 +87,19 @@ def visual_and_plot(images, pred, pred_atk):
     plt.show()
 
 
-def channel_filename(channel, adv_train=False):
+def channel_filename(channel, adv_train=False, set_name='MF'):
     suffix = ''
     suffix += '_adv' if adv_train else ''
 
-    tmp_model = f'tmp_{channel}{suffix}.pth'
-    tmp_optim = f'tmp_{channel}{suffix}.optim'
-    final_model = f'final_{channel}{suffix}.pth'
-    log_file = f'log_{channel}{suffix}.txt'
+    if set_name == 'MF':
+        tmp_model = f'tmp_{channel}{suffix}.pth'
+        tmp_optim = f'tmp_{channel}{suffix}.optim'
+        final_model = f'final_{channel}{suffix}.pth'
+        log_file = f'log_{channel}{suffix}.txt'
+    else:
+        tmp_model = f'tmp_{channel}{suffix}_{set_name}.pth'
+        tmp_optim = f'tmp_{channel}{suffix}_{set_name}.optim'
+        final_model = f'final_{channel}{suffix}_{set_name}.pth'
+        log_file = f'log_{channel}{suffix}_{set_name}.txt'
     
     return tmp_model, tmp_optim, final_model, log_file

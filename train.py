@@ -4,9 +4,11 @@ import argparse
 import time
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+import torchvision.models.segmentation as segmentation
 
 from util.MF_dataset import MF_dataset, MF_dataset_extd
 from util.util import calculate_accuracy, DEVICE, channel_filename
@@ -31,6 +33,20 @@ lr_start  = 0.01
 lr_decay  = 0.95
 
 
+def get_model(model:nn.Module, in_channel:int):
+    new_conv1 = nn.Conv2d(
+        in_channels=in_channel,
+        out_channels=64,
+        kernel_size=(7, 7),
+        stride=(2, 2),
+        padding=(3, 3),
+        bias=False
+    )
+    
+    model.backbone.conv1 = new_conv1
+    return model
+
+
 def train(epo, model, train_loader, optimizer, adv_train:bool=False):
     lr_this_epo = lr_start * lr_decay**(epo-1)
     for param_group in optimizer.param_groups:
@@ -47,6 +63,9 @@ def train(epo, model, train_loader, optimizer, adv_train:bool=False):
     for it, (images, labels, names) in enumerate(train_loader):
         images = Variable(images).cuda(args.gpu) 
         labels = Variable(labels).cuda(args.gpu)
+        if args.model_name == 'DeepLabV3' and args.channels == 3:
+            images = images[:, :3]
+            
         if args.gpu >= 0:
             images = images.cuda(args.gpu)
             labels = labels.cuda(args.gpu)
@@ -58,6 +77,9 @@ def train(epo, model, train_loader, optimizer, adv_train:bool=False):
 
         optimizer.zero_grad()
         logits = model(images)
+        if isinstance(logits, torch.Tensor) is False:
+            logits = logits['out']
+            
         loss = F.cross_entropy(logits, labels)
         loss.backward()
         optimizer.step()
@@ -89,11 +111,17 @@ def validation(epo, model, val_loader):
         for it, (images, labels, names) in enumerate(val_loader):
             images = Variable(images)
             labels = Variable(labels)
+            if args.model_name == 'DeepLabV3' and args.channels == 3:
+                images = images[:, :3]
+                
             if args.gpu >= 0:
                 images = images.cuda(args.gpu)
                 labels = labels.cuda(args.gpu)
 
             logits = model(images)
+            if isinstance(logits, torch.Tensor) is False:
+                logits = logits['out']
+                
             loss = F.cross_entropy(logits, labels)
             acc = calculate_accuracy(logits, labels)
             loss_avg += float(loss)
@@ -114,8 +142,11 @@ def main():
     img_dir = os.path.join('data', args.dataset)
     if args.model_name == 'SegNet':
         model = eval(args.model_name)(n_class=n_class, in_channels=args.channels)
-    else:
+    elif args.model_name == 'MFNet':
         model = eval(args.model_name)(n_class=n_class)
+    else:
+        model = segmentation.deeplabv3_resnet50(pretrained=False, num_classes=n_class)
+        model = get_model(model, args.channels)
         
     if args.gpu >= 0: model.cuda(args.gpu)
     optimizer = torch.optim.SGD(model.parameters(), lr=lr_start, momentum=0.9, weight_decay=0.0005) 
@@ -166,7 +197,7 @@ def main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train MFNet with pytorch')
     parser.add_argument('--model_name',  '-M',  type=str, default='MFNet')
-    parser.add_argument('--batch_size',  '-B',  type=int, default=8)
+    parser.add_argument('--batch_size',  '-B',  type=int, default=16)
     parser.add_argument('--epoch_max' ,  '-E',  type=int, default=100)
     parser.add_argument('--epoch_from',  '-EF', type=int, default=1)
     parser.add_argument('--gpu',         '-G',  type=int, default=0)

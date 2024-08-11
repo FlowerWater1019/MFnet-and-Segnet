@@ -5,11 +5,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import grad
 from torch import Tensor
-
+import torchattacks
+from torchattacks.attacks.autoattack import AutoAttack
+from torchattacks.attacks.apgd import APGD
+from torchattacks.attacks.fgsm import FGSM
+from torchattacks.attacks.pgd import PGD
+from torchattacks.attacks.eotpgd import EOTPGD
+from torchattacks.attacks.mifgsm import MIFGSM
 
 class MyAttack:
-
-    def __init__(self, model:nn.Module, method:str, eps:float, alpha:float, steps:int, mask_channel:List[int]=None):
+    def __init__(self, model:nn.Module, method:str, 
+                 eps:float, alpha:float, steps:int, 
+                 norm:str, mask_channel:List[int]=None, 
+                 n_class=9):
         self.model = model
         self.method = method
         self.eps = eps
@@ -20,6 +28,12 @@ class MyAttack:
         ATTACK_FN = {
             'PGD':  self.PGD,
             'FGSM': self.FGSM,
+            'AUTOATTACK': self.AUTOATTACK,
+            'APGD': self.APGD,
+            'R_FGSM': self.R_FGSM,
+            'R_PGD': self.R_PGD,
+            'EOTPGD': self.EOTPGD,
+            'MIFGSM': self.MIFGSM
         }
         self.attack_func = ATTACK_FN[self.method]
     
@@ -31,11 +45,75 @@ class MyAttack:
             g[:, c, :, :] = 0
         return g
 
+    def EOTPGD(self, X:Tensor, Y:Tensor):
+        with torch.enable_grad():
+            X.requires_grad = True
+        
+            atk_method = torchattacks.EOTPGD(self.model)
+            AX = atk_method(X, Y)
+            
+        for c in self.mask_channel:
+            AX[:, c, :, :] = X[:, c, :, :]
+            
+        return AX
+    
+    def R_PGD(self, X:Tensor, Y:Tensor):
+        with torch.enable_grad():
+            X.requires_grad = True
+        
+            atk_method = torchattacks.PGD(self.model)
+            AX = atk_method(X, Y)
+            
+        for c in self.mask_channel:
+            AX[:, c, :, :] = X[:, c, :, :]
+            
+        return AX
+    
+    def R_FGSM(self, X:Tensor, Y:Tensor):
+        with torch.enable_grad():
+            X.requires_grad = True
+        
+            atk_method = torchattacks.FGSM(self.model)
+            AX = atk_method(X, Y)
+        
+        for c in self.mask_channel:
+            AX[:, c, :, :] = X[:, c, :, :]
+            
+        return AX
+    
+    def MIFGSM(self, X:Tensor, Y:Tensor):
+        with torch.enable_grad():
+            X.requires_grad = True
+        
+            atk_method = torchattacks.MIFGSM(self.model)
+            AX = atk_method(X, Y)
+        
+        for c in self.mask_channel:
+            AX[:, c, :, :] = X[:, c, :, :]
+            
+        return AX
+    
+    def APGD(self, X:Tensor, Y:Tensor):
+        with torch.enable_grad():
+            X.requires_grad = True
+        
+            atk_method = torchattacks.APGD(self.model)
+            AX = atk_method(X, Y)
+                
+        for c in self.mask_channel:
+            AX[:, c, :, :] = X[:, c, :, :]
+            
+        return AX
+    
     def FGSM(self, X:Tensor, Y:Tensor):
         X.requires_grad = True
     
         with torch.enable_grad():
             logits = self.model(X)  
+            
+            if isinstance(logits, torch.Tensor) is False:
+                logits = logits['out']
+                
             loss = F.cross_entropy(logits, Y)
             g = grad(loss, X, loss)[0]  
         g = self.mask_grad_channel(g)
@@ -52,6 +130,10 @@ class MyAttack:
       
             with torch.enable_grad():
                 logits = self.model(AX)
+                
+                if isinstance(logits, torch.Tensor) is False:
+                    logits = logits['out']
+                    
                 loss = F.cross_entropy(logits, Y, reduction='none')
                 g = grad(loss, AX, loss)[0]
             g = self.mask_grad_channel(g)
@@ -61,7 +143,18 @@ class MyAttack:
             AX = (X + DX).clamp(0, 1).detach()
         return AX
   
-  
+    def AUTOATTACK(self, X:Tensor, Y:Tensor):
+        atk_method = torchattacks.AutoAttack(self.model, norm='Linf', 
+                                            eps=self.eps, version='standard', 
+                                            n_classes=9, seed=None, verbose=False)
+        AX = atk_method(X, Y)
+        
+        for c in self.mask_channel:
+            AX[:, c, :, :] = X[:, c, :, :]
+            
+        return AX
+        
+        
 def get_attack(args, model):
     mask_channel = vars(args).get('mask_channel')
-    return MyAttack(model, args.method, args.eps, args.alpha, args.steps, mask_channel)
+    return MyAttack(model, args.method, args.eps, args.alpha, args.steps, args.norm, mask_channel)

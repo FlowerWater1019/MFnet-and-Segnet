@@ -1,0 +1,1 @@
+python test.py -M SegNet -c 3 -atk --mask_channel 1 2

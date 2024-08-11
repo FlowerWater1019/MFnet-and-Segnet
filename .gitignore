@@ -8,3 +8,5 @@ repo/*
 
 # generated data
 data/MF_*
+weights
+data

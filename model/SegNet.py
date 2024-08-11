@@ -71,12 +71,11 @@ class SegNet(nn.Module):
         )
 
     def forward(self, x):
-        if x.shape[0] == 4:
-            if self.in_channels == 3:
-                x = x[:, :3]
-            elif self.in_channels == 1:
-                x = x[:,3:]
-        
+        if self.in_channels == 3:
+            x = x[:, :3]
+        elif self.in_channels == 1:
+            x = x[:, 3:]
+
         x       = self.down1(x)
         x, ind1 = F.max_pool2d(x, 2, 2, return_indices=True)
         x       = self.down2(x)

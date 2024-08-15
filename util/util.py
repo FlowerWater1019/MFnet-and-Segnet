@@ -87,10 +87,11 @@ def visual_and_plot(images, pred, pred_atk):
     plt.show()
 
 
-def channel_filename(channel, adv_train=False, set_name='MF'):
+def channel_filename(channel, adv_train=False, set_name='MF', no_g=False):
     suffix = ''
     suffix += '_adv' if adv_train else ''
-
+    suffix += '_NoG' if no_g else ''
+    
     if set_name == 'MF':
         tmp_model = f'tmp_{channel}{suffix}.pth'
         tmp_optim = f'tmp_{channel}{suffix}.optim'

@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import torchvision.models.segmentation as segmentation
@@ -14,11 +15,19 @@ from util.MF_dataset import MF_dataset, MF_dataset_extd
 from util.util import calculate_accuracy, calculate_result, DEVICE, visual_and_plot, channel_filename
 
 from model import MFNet, SegNet
-from train import n_class, data_dir, model_dir, get_model
+from train import n_class, data_dir, model_dir, get_model, delete_g
 from attack import get_attack
 from tqdm import tqdm
 
 
+def transform_channel(x:Tensor) -> Tensor:
+    r, g, b, ir = x[:, 0, :, :], x[:, 1, :, :], x[:, 2, :, :], x[:, 3, :, :]
+    r_avg, r_std = r.mean(dim=(1, 2), keepdim=True), r.std(dim=(1, 2), keepdim=True)
+    g_avg, g_std = g.mean(dim=(1, 2), keepdim=True), g.std(dim=(1, 2), keepdim=True)
+    g_hat = (r - r_avg) / r_std * g_std + g_avg
+    return torch.stack([r, g_hat, b, ir], dim=1)
+    
+    
 def main():
     img_dir = os.path.join('data', args.dataset)
     
@@ -89,20 +98,28 @@ def main():
         for it, (images, labels, names) in enumerate(test_loader):
             images = Variable(images)
             labels = Variable(labels)
-            if args.model_name == 'DeepLabV3' and args.channels == 3:
-                images = images[:, :3]
+            
+            if args.without_g:
+                assert args.channels == 3
+                images = delete_g(images)
+            
+            if args.model_name == 'DeepLabV3':
+                if args.channels == 3:
+                    images = images[:, :3]
+                elif args.channels == 1:
+                    images = images[:, 3:]
                 
             if args.gpu >= 0:
                 images = images.cuda(args.gpu)
                 labels = labels.cuda(args.gpu)
 
+            if args.shuffle:
+                images = transform_channel(images)
+                
             if args.atk:
                 images = attack(images, labels)
 
             logits = model(images)
-            if not isinstance(logits, torch.Tensor):
-                logits = logits['out']
-                
             loss = F.cross_entropy(logits, labels)
             acc = calculate_accuracy(logits, labels)
             loss_avg += float(loss)
@@ -140,7 +157,9 @@ if __name__ == '__main__':
     parser.add_argument('--single',      '-s',  type=int, default=0)
     parser.add_argument('--channels',    '-c',  type=int, default=4)
     parser.add_argument('--split',       '-sp', type=str, default='test')
+    parser.add_argument('--shuffle',            action='store_true')
     parser.add_argument('--dataset',     '-D',  type=str, default='MF', choices=['MF', 'MMIF', 'DIF'])
+    parser.add_argument('--without_g',          action='store_true')
     # adv attack
     parser.add_argument('-atk',           action='store_true')
     parser.add_argument('--method',       type=str,   default='MIFGSM', 
@@ -149,7 +168,7 @@ if __name__ == '__main__':
                                  'EOTPGD', 'MIFGSM'])
     parser.add_argument('--eps',          type=float, default=8/255)
     parser.add_argument('--alpha',        type=float, default=1/255)
-    parser.add_argument('--steps',        type=int,   default=20)
+    parser.add_argument('--steps',        type=int,   default=16)
     parser.add_argument('--mask_channel', type=int,   default=[], nargs='+', help='channels to mask, list of int')
     parser.add_argument('--norm',         type=str,   default='Linf', choices=['Linf', 'L2'])  
     # adv train
@@ -157,7 +176,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     model_dir = os.path.join(model_dir, args.model_name)
-    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels, adv_train=args.adv_train, set_name=args.dataset)
+    tmp_model, tmp_optim, final_model, log_name = channel_filename(args.channels, adv_train=args.adv_train, 
+                                                                   set_name=args.dataset, no_g=args.without_g)
     final_model_file = os.path.join(model_dir, final_model)
     if args.model_name != 'DeepLabV3':
         assert os.path.exists(final_model_file), 'model file `%s` do not exist' % (final_model_file)

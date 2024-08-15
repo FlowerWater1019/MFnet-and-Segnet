@@ -1,16 +1,15 @@
-import os
-import sys
-from pathlib import Path
-from argparse import ArgumentParser
 import logging ; logging.basicConfig(level=logging.CRITICAL)
 import warnings ; warnings.filterwarnings("ignore") 
-from SegNet import SegNet
+
+import os
+import sys
 from PIL import Image
 
 import torch
 import torch.nn as nn
 import numpy as np
-from torch.autograd import Variable
+
+from SegNet import SegNet
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -25,18 +24,19 @@ from net import Restormer_Encoder, Restormer_Decoder, BaseFeatureExtraction, Det
 
 
 class MMIF_SegNet(nn.Module):
+
     def __init__(self, n_class, in_channels):
         super(MMIF_SegNet, self).__init__()
+
         self.in_channels = in_channels
         self.Encoder = torch.nn.DataParallel(Restormer_Encoder()).to(device)
         self.Decoder = torch.nn.DataParallel(Restormer_Decoder()).to(device)
         self.BaseFuseLayer = torch.nn.DataParallel(BaseFeatureExtraction(dim=64, num_heads=8)).to(device)
         self.DetailFuseLayer = torch.nn.DataParallel(DetailFeatureExtraction(num_layers=1)).to(device)
         self.SegNet = SegNet(n_class, in_channels)
-    
+
     def forward(self, data_vis, data_ir):
         feature_V_B, feature_V_D, feature_V = self.Encoder(data_vis)
-        breakpoint()
         feature_I_B, feature_I_D, feature_I = self.Encoder(data_ir)
         feature_F_B = self.BaseFuseLayer(feature_V_B, feature_I_B)
         feature_F_D = self.DetailFuseLayer(feature_V_D, feature_I_D)
@@ -45,14 +45,11 @@ class MMIF_SegNet(nn.Module):
         fi = (data_Fuse * 255).byte().cpu().numpy().squeeze()
         
         input_w, input_h = 640, 480
-        img = np.asarray(Image.fromarray(fi).resize((input_w, input_h)),
-                         dtype=np.float32)
+        img = np.asarray(Image.fromarray(fi).resize((input_w, input_h)), dtype=np.float32)
         img = np.expand_dims(img, axis=0) / 255
-        img = torch.tensor(img).unsqueeze(0)
-        img = Variable(img).to(device)
-        
+        img = torch.from_numpy(img).unsqueeze(0).to(device)
+
         pred_img = self.SegNet(img)
-        
         return pred_img
     
     
@@ -67,4 +64,3 @@ def unit_test():
     
 if __name__ == '__main__':
     unit_test()
-    

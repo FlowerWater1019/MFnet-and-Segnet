@@ -1,8 +1,11 @@
 # coding:utf-8
-import matplotlib.pyplot as plt
-import numpy as np
-from PIL import Image
 from pathlib import Path
+from PIL import Image
+
+import numpy as np
+from torch import Tensor
+import matplotlib.pyplot as plt
+
 
 DEVICE = {'cpu':'cuda:0'}
 BASE_PATH = Path(__file__).parent.absolute()
@@ -104,3 +107,8 @@ def channel_filename(channel, adv_train=False, set_name='MF', no_g=False):
         log_file = f'log_{channel}{suffix}_{set_name}.txt'
     
     return tmp_model, tmp_optim, final_model, log_file
+
+
+def delete_g(image:Tensor) -> Tensor:
+    assert image.shape[1] == 4
+    return image[:, [0, 2, 3], ...]

@@ -90,6 +90,3 @@ class RandomNoise():
             image = (image + noise).clip(0,255).astype(image.dtype)
 
         return image, label
-        
-
-

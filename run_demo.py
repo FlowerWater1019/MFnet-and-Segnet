@@ -5,11 +5,12 @@ import numpy as np
 from PIL import Image
 
 import torch
-from torch.autograd import Variable
 
-from util.util import visualize, DEVICE
-from model import MFNet
+from model import SegNet, MFNet
 from train import n_class, model_dir
+from util.util import DEVICE, visualize
+
+# NOTE: this script is broken, unknown use :(
 
 
 def main():
@@ -31,7 +32,7 @@ def main():
         fpath.append('image/'+file)
         images.append( np.asarray(Image.open('image/'+file)) )
     images = np.asarray(images, dtype=np.float32).transpose((0,3,1,2))/255.
-    images = Variable(torch.tensor(images))
+    images = torch.from_numpy(images)
     if args.gpu >= 0: images = images.cuda(args.gpu)
 
     model.eval()

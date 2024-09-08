@@ -75,7 +75,6 @@ def get_visual_image(pred):
 
 
 def visual_and_plot(images, pred, pred_atk):
-    images = images[:,:3].to('cpu').squeeze(0).permute(1, 2, 0).numpy()
     img = get_visual_image(pred)
     img_atk = get_visual_image(pred_atk)
 

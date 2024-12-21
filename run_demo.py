@@ -8,9 +8,11 @@ import torch
 
 from model import SegNet, MFNet
 from train import n_class, model_dir
-from util.util import DEVICE, visualize
+from util.util import visualize
 
 # NOTE: this script is broken, unknown use :(
+
+DEVICE = {'cpu':'cuda:0'}
 
 
 def main():

@@ -16,7 +16,10 @@ def get_dv3_model(n_class:int, in_channels:int) -> DeepLabV3:
         kernel_size=conv1_old.kernel_size,
         stride=conv1_old.stride,
         padding=conv1_old.padding,
-        bias=conv1_old.bias is not None
+        dilation=conv1_old.dilation,
+        groups=conv1_old.groups,
+        bias=conv1_old.bias is not None,
+        padding_mode=conv1_old.padding_mode,
     )
     backbone.conv1 = conv1_new
     # fix .forward() output

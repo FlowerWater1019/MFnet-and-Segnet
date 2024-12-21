@@ -7,7 +7,6 @@ from torch import Tensor
 import matplotlib.pyplot as plt
 
 
-DEVICE = {'cpu':'cuda:0'}
 BASE_PATH = Path(__file__).parent.absolute()
 
 
@@ -85,7 +84,7 @@ def visual_and_plot(images, pred, pred_atk):
     ax[1].set_title('Original Prediction')
     ax[2].imshow(img_atk)
     ax[2].set_title('Adversarial Prediction')
-    
+
     plt.show()
 
 

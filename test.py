@@ -109,7 +109,6 @@ def main():
         for it, (images, labels, names) in enumerate(test_loader):
             images = Variable(images)
             labels = Variable(labels)
-            
             if args.without_g:
                 assert args.channels == 3
                 images = delete_g(images)
@@ -177,7 +176,8 @@ if __name__ == '__main__':
     parser.add_argument('--method',       type=str,   default='MIFGSM', 
                         choices=['PGD', 'FGSM', 'AUTOATTACK', 
                                  'APGD', 'R_FGSM', 'R_PGD',
-                                 'EOTPGD', 'MIFGSM'])
+                                 'EOTPGD', 'MIFGSM', 'CW', 'DeepFool', 'PGDL2',
+                                 'pixle', 'FAB'])
     parser.add_argument('--eps',          type=float, default=8/255)
     parser.add_argument('--alpha',        type=float, default=1/255)
     parser.add_argument('--steps',        type=int,   default=16)

@@ -41,6 +41,18 @@
 | CDDFuse + DeepLabV3 | - | - | 7.18% |
 | Dif-Fusion + DeepLabV3 | - | - | 6.80% |
 
+| R_PGD Attack | rgb | inf | rgb + inf |
+| :-: | :-: | :-: | :-: |
+| Seg ( rgb ) | 2.83% | - | - |
+| Seg ( inf ) | - | 2.23% | - |
+| Seg ( rgb + inf ) | 4.21% | 34.47% | 3.36% |
+| DeepLabV3 ( rgb ) | 9.86% | - | - |
+| DeepLabV3 ( inf ) | - | - | - |
+| DeepLabV3 ( rgb + inf ) | 13.80% | 40.96% | 12.23% |
+| MF | 4.87% | 30.78% | 3.22% |
+| CDDFuse + Seg | - | - | 1.23% |
+
+
 | name | Test |
 | :-: | :-: |
 | Seg-rgb | 49.67% |

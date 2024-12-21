@@ -107,7 +107,10 @@ def main():
     model.eval()
     with torch.no_grad():
         for it, (images, labels, names) in enumerate(test_loader):
-            images = Variable(images)
+            if args.method == 'SEGPGD':
+                images = images.to(dtype=torch.float32)
+            else:
+                images = Variable(images)
             labels = Variable(labels)
             if args.without_g:
                 assert args.channels == 3
@@ -177,7 +180,7 @@ if __name__ == '__main__':
                         choices=['PGD', 'FGSM', 'AUTOATTACK', 
                                  'APGD', 'R_FGSM', 'R_PGD',
                                  'EOTPGD', 'MIFGSM', 'CW', 'DeepFool', 'PGDL2',
-                                 'pixle', 'FAB'])
+                                 'pixle', 'FAB', 'SEGPGD'])
     parser.add_argument('--eps',          type=float, default=8/255)
     parser.add_argument('--alpha',        type=float, default=1/255)
     parser.add_argument('--steps',        type=int,   default=16)

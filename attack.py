@@ -7,6 +7,7 @@ from torch.autograd import grad
 from torch import Tensor
 import torchattacks
 import torchattacks.attacks
+from torch.autograd import Variable
 from torchattacks.attacks.autoattack import AutoAttack
 from torchattacks.attacks.apgd import APGD
 from torchattacks.attacks.fgsm import FGSM
@@ -42,6 +43,7 @@ class MyAttack:
             'pixle': self.Pixle,
             'FAB': self.FAB,
             'EADL1': self.EADL1,
+            'SEGPGD': self.SEGPGD
         }
         self.attack_func = ATTACK_FN[self.method]
     
@@ -95,7 +97,7 @@ class MyAttack:
         with torch.enable_grad():
             X.requires_grad = True
         
-            atk_method = torchattacks.PGDL2(self.model, eps=32, alpha=4, steps=self.steps)
+            atk_method = torchattacks.PGDL2(self.model, eps=3.0, alpha=1, steps=self.steps)
             AX = atk_method(X, Y)
             
         for c in self.mask_channel:
@@ -236,7 +238,56 @@ class MyAttack:
             
         return AX
         
+    # def SEGPGD(self, image, new_images, new_labels):
+    def SEGPGD(self, X:Tensor, Y:Tensor):
+        image = X.to(dtype=torch.float32)
+        new_images = Variable(image, requires_grad=True)
+        new_labels = Variable(Y, requires_grad=False)
+        
+        criterion = nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
+        Total_iterations = 10
+        eps = self.eps / Total_iterations
+        for i in range(Total_iterations):
+            new_images_d = new_images.detach()
+            new_images_d.requires_grad_()
+            with torch.enable_grad():
+                logits = self.model(new_images_d)
+
+                #logits vs new labels
+                lamb = (i-1)/(Total_iterations*2)
+
+                pred = torch.max(logits,1).values
+                pred = torch.unsqueeze(pred,1)
+                breakpoint()
+                #    print(pred.shape)
+                #    print(torch.unsqueeze(new_labels,1).shape)
+
+                mask_t = pred == torch.unsqueeze(new_labels,1)
+                mask_t = torch.squeeze(mask_t,1).int()
+                np_mask_t = torch.unsqueeze(mask_t,1)
+
+                mask_f = pred != torch.unsqueeze(new_labels,1)
+                mask_f = torch.squeeze(mask_f,1).int()
+                np_mask_f = torch.unsqueeze(mask_f,1)
+
+                # need to be check the loss
+                #    print((np_mask_t*logits).shape)
+                #    print((new_labels).shape)
+                loss_t = lamb* criterion(np_mask_t*logits, new_labels)
+                loss_f = (1-lamb) * criterion(np_mask_f*logits, new_labels)
+                loss = loss_t + loss_f
+           
+            grad = torch.autograd.grad(loss, [new_images_d])[0]
+            image = image.detach() + eps * torch.sign(grad.detach())
+            adversarial_x = torch.min(torch.max(new_images_d, new_images - eps*1), new_images + eps*1)
+
+        for c in self.mask_channel:
+            adversarial_x[:, c, :, :] = X[:, c, :, :]
+        return adversarial_x
         
 def get_attack(args, model):
     mask_channel = vars(args).get('mask_channel')
     return MyAttack(model, args.method, args.eps, args.alpha, args.steps, args.norm, mask_channel)
+
+if __name__ == '__main__':
+    x = torch.rand()

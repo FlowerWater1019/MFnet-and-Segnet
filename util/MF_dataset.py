@@ -37,8 +37,12 @@ class MF_dataset(Dataset):
         image = self.read_image(name, 'images')
         label = self.read_image(name, 'labels')
 
-        for func in self.transform:
+        image = np.asarray(image)
+        label = np.asarray(label)
+        for func in self.transform:  # need HWC numpy
             image, label = func(image, label)
+        image = Image.fromarray(image)
+        label = Image.fromarray(label)
 
         image = np.asarray(image.resize((self.input_w, self.input_h)), dtype=np.float32) / 255
         if image.ndim == 2:
@@ -57,7 +61,7 @@ class MF_dataset(Dataset):
     def __getitem__(self, index):
         if self.is_train is True:
             return self.get_train_item(index)
-        else: 
+        else:
             return self.get_test_item (index)
 
     def __len__(self):
@@ -70,15 +74,15 @@ class MF_dataset_extd(MF_dataset):
         super().__init__(data_dir, split, have_label, input_h, input_w, transform)
 
         self.img_dir = img_dir
-    
+
     def read_image(self, name, folder):
         if folder == 'images':
             file_path = os.path.join(self.img_dir, '%s/%s.png' % (folder, name))
         else:
             file_path = os.path.join('data/MF/', '%s/%s.png' % (folder, name))
         return Image.open(file_path)
-    
-    
+
+
 if __name__ == '__main__':
     data_dir = 'data/MF/'
     MF_dataset(data_dir, 'test', True)

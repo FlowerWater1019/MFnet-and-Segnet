@@ -9,10 +9,16 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from model import get_model
+from model import get_model, MODELS
 from util.MF_dataset import MF_dataset, MF_dataset_extd
 from util.util import calculate_accuracy, channel_filename, delete_g
 from util.augmentation import RandomFlip, RandomCrop, RandomCropOut, RandomBrightness, RandomNoise
+
+torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.deterministic = False
+torch.backends.cudnn.allow_tf32 = True
+torch.set_float32_matmul_precision('medium')
+
 
 # config
 n_class   = 9
@@ -73,11 +79,10 @@ def train(epo, model, train_loader, optimizer, adv_train:bool=False):
             assert args.channels == 3
             images = delete_g(images)
 
-        if args.model_name == 'DeepLabV3':
-            if args.channels == 3:
-                images = images[:, :3]
-            elif args.channels == 1:
-                images = images[:, 3:]
+        if args.channels == 3:
+            images = images[:, :3]
+        elif args.channels == 1:
+            images = images[:, 3:]
 
         adv_loss = 0
         if adv_train:
@@ -125,11 +130,10 @@ def validation(epo, model, val_loader):
             assert args.channels == 3
             images = delete_g(images)
 
-        if args.model_name == 'DeepLabV3':
-            if args.channels == 3:
-                images = images[:, :3]
-            elif args.channels == 1:
-                images = images[:, 3:]
+        if args.channels == 3:
+            images = images[:, :3]
+        elif args.channels == 1:
+            images = images[:, 3:]
 
         logits = model(images)
         loss = F.cross_entropy(logits, labels)
@@ -198,7 +202,7 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train MFNet with pytorch')
-    parser.add_argument('--model_name',  '-M',  type=str, default='MFNet', choices=['SegNet', 'MFNet', 'DeepLabV3'])
+    parser.add_argument('--model_name',  '-M',  type=str, default='MFNet', choices=MODELS)
     parser.add_argument('--dataset',     '-D',  type=str, default='MF', choices=['MF', 'MMIF', 'DIF'])
     parser.add_argument('--channels',    '-c',  type=int, default=4)
     parser.add_argument('--batch_size',  '-B',  type=int, default=8)

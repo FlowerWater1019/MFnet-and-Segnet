@@ -2,6 +2,11 @@
 python train.py -M SegNet -c 3 --without_g
 
 
+:ESSA_models
+
+python train.py -M MFNet_ESSA
+python train.py -M SegNet_ESSA
+
 
 :adv_train
 

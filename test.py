@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
 
-from model import get_model
+from model import get_model, MODELS
 from train import n_class, data_dir, model_dir, delete_g
 from attack import get_attack, ATTACK_METHODS
 
@@ -160,10 +160,10 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test MFNet with pytorch')
-    parser.add_argument('--model_name',  '-M',  type=str, default='SegNet')
-    parser.add_argument('--channels',    '-c',  type=int, default=4)
+    parser.add_argument('--model_name',  '-M',  type=str, default='MFNet', choices=MODELS)
     parser.add_argument('--dataset',     '-D',  type=str, default='MF', choices=['MF', 'MMIF', 'DIF'])
     parser.add_argument('--split',       '-sp', type=str, default='test')
+    parser.add_argument('--channels',    '-c',  type=int, default=4)
     parser.add_argument('--batch_size',  '-B',  type=int, default=1)
     parser.add_argument('--gpu',         '-G',  type=int, default=0)
     parser.add_argument('--num_workers', '-j',  type=int, default=0)
